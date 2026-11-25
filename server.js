@@ -1,49 +1,22 @@
-require("dotenv").config();
+import express from "express";
+import dotenv from "dotenv";
+import connectDB from "./database/mongodb.js";
+import productRoutes from "./routes/productRoutes.js";
+import errorHandler from "./middleware/errorHandler.js";
 
-const express = require("express");
-const connectDB = require("./config/db");
-const productRoutes = require("./routes/productRoutes");
-const errorMiddleware = require("./middleware/errorMiddleware");
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.status(200).json({
-    message: "Inventory Management API is running",
-    endpoints: {
-      products: "/api/products",
-      lowStock: "/api/products/low-stock",
-      categorySummary: "/api/products/summary"
-    }
-  });
-});
 
 app.use("/api/products", productRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log("Server started on port " + PORT);
+  });
 });
-
-app.use(errorMiddleware);
-
-async function startServer() {
-  try {
-    if (!process.env.MONGO_URI) {
-      throw new Error("MONGO_URI is missing. Add it to your .env file.");
-    }
-    await connectDB();
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error("Unable to start server:", error.message);
-    process.exit(1);
-  }
-}
-
-startServer();
-
-module.exports = app;
